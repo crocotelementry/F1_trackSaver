@@ -16,17 +16,17 @@ import (
 )
 
 var (
-	header         structs.PacketHeader
-	Motion_packet  structs.PacketMotionData
-	Session_packet structs.PacketSessionData
-	Lap_packet     structs.PacketLapData
-	// redis_ping_done                        = make(chan bool)
-	redis_pool = newPool() // newPool returns a pointer to a redis.Pool
-	// incrementing_motion_packet_number      = 0
-	// incrementing_session_packet_number     = 0
-	current_lap_number = uint8(0)
-	track_length       = uint16(0) // meters
-	track_id           = int8(0)
+	header              structs.PacketHeader
+	Motion_packet       structs.PacketMotionData
+	Session_packet      structs.PacketSessionData
+	Lap_packet          structs.PacketLapData
+	redis_pool          = newPool() // newPool returns a pointer to a redis.Pool
+	current_lap_number  = uint8(0)
+	track_length        = uint16(0) // meters
+	track_id            = int8(-2)  // since -1 is unknown and 0-21 are real ids, -2 is sufficiant
+	total_packet_number = 0
+	right_packet_number = 0
+	left_packet_number  = 0
 
 	addrs, _  = net.ResolveUDPAddr("udp", ":20777")
 	sock, err = net.ListenUDP("udp", addrs)
@@ -72,6 +72,32 @@ func ping(c redis.Conn) error {
 
 	// Output: PONG
 	return nil
+}
+
+// function that returns which side of the track the data is on
+func which_side(current_lap_number) string {
+	switch current_lap_number {
+	case 2:
+		return "right"
+	case 4:
+		return "left"
+	default:
+		log.Println("Asked which side for a lap number that was not 2 (right) or 4 (left)")
+		return "error"
+	}
+}
+
+// Function that returns the incrementing number for its corresponding side
+func which_side_incrementing_number(current_lap_number) string {
+	switch current_lap_number {
+	case 2:
+		return strconv.Itoa(right_packet_number)
+	case 4:
+		return strconv.Itoa(left_packet_number)
+	default:
+		log.Println("Asked incrementing number for its corresponding side for a lap number that was not 2 (right) or 4 (left)")
+		return "error"
+	}
 }
 
 func main() {
@@ -147,24 +173,53 @@ func main() {
 
 		switch header.M_packetId {
 		case 0:
-			// If the packet we received is a motion_packet, read its binary into our motion_packet struct
-			if err := binary.Read(packet_bytes_reader, binary.LittleEndian, &Motion_packet); err != nil {
-				fmt.Println("binary.Read motion_packet failed:", err)
-			}
 
-			// // Marshal the struct into json so we can save it in our redis database
-			// json_motion_packet, err := json.Marshal(Motion_packet)
-			// if err != nil {
-			// 	fmt.Println(err)
-			// }
-			//
-			// if _, err := redis_conn.Do("SET", (strconv.FormatUint(Motion_packet.M_header.M_sessionUID, 10) + ":0:" + strconv.Itoa(incrementing_motion_packet_number)), json_motion_packet); err != nil {
-			// 	fmt.Println("Adding json_motion_packet to Redis database failed:", err)
-			// 	incrementing_packet_number -= 1
-			// 	incrementing_motion_packet_number -= 1
-			// }
-			// incrementing_packet_number += 1
-			// incrementing_motion_packet_number += 1
+			// We only want to record data when we are driving on the right during lap 2 or the left during lap 4
+			if current_lap_number == 2 || current_lap_number == 4 {
+				// If the packet we received is a motion_packet, read its binary into our motion_packet struct
+				if err := binary.Read(packet_bytes_reader, binary.LittleEndian, &Motion_packet); err != nil {
+					fmt.Println("binary.Read motion_packet failed:", err)
+				}
+
+				position_struct := structs.Position_struct{
+					Frame_identifier: Motion_packet.M_header.M_frameIdentifier,
+					Track_id:         track_id,
+					Lap_number:       current_lap_number,
+					Side:             which_side(current_lap_number),
+
+					WorldPositionX: Motion_packet.M_carMotionData[Motion_packet.M_header.M_playerCarIndex].M_worldPositionX,
+					WorldPositionY: Motion_packet.M_carMotionData[Motion_packet.M_header.M_playerCarIndex].M_worldPositionY,
+					WorldPositionZ: Motion_packet.M_carMotionData[Motion_packet.M_header.M_playerCarIndex].M_worldPositionZ,
+				}
+
+				// Marshal the struct into json so we can save it in our redis database
+				json_position_struct, err := json.Marshal(position_struct)
+				if err != nil {
+					fmt.Println(err)
+				}
+
+				if _, err := redis_conn.Do("SET", ("track_saver:" + which_side(current_lap_number) + ":" + which_side_incrementing_number(current_lap_number)), json_motion_packet); err != nil {
+
+					fmt.Println("Adding track_saver data "+which_side(current_lap_number)+" to Redis database failed:", err)
+					total_packet_number -= 1
+
+					switch which_side(current_lap_number) {
+					case "right":
+						right_packet_number -= 1
+					case "left":
+						left_packet_number -= 1
+					}
+				}
+
+				total_packet_number += 1
+
+				switch which_side(current_lap_number) {
+				case "right":
+					right_packet_number += 1
+				case "left":
+					left_packet_number += 1
+				}
+			}
 
 		case 1:
 			// If the packet we received is the session_packet, read its binary into our session_packet struct
@@ -180,23 +235,9 @@ func main() {
 			}
 
 			// If this is our first session_packet received, make sure to save the M_trackId
-			if track_id == 0 {
+			if track_id == -2 {
 				track_id = Session_packet.M_trackId
 			}
-
-			// // Marshal the struct into json so we can save it in our redis database
-			// json_session_packet, err := json.Marshal(Session_packet)
-			// if err != nil {
-			// 	fmt.Println(err)
-			// }
-			//
-			// if _, err := redis_conn.Do("SET", (strconv.FormatUint(Session_packet.M_header.M_sessionUID, 10) + ":1:" + strconv.Itoa(incrementing_session_packet_number)), json_session_packet); err != nil {
-			// 	fmt.Println("Adding json_motion_packet to Redis database failed:", err)
-			// 	incrementing_packet_number -= 1
-			// 	incrementing_session_packet_number -= 1
-			// }
-			// incrementing_packet_number += 1
-			// incrementing_session_packet_number += 1
 
 		case 2:
 			// If the packet we received is the lap_packed, read its binary into our lap_packet struct
@@ -226,20 +267,35 @@ func main() {
 					case 1:
 						fmt.Println("Lap 1: Get the feel for the track")
 						fmt.Println("Next lap: You will be driving on the right side of the track at a slow speed")
+						current_lap_number = 1
 
 					case 2:
 						fmt.Println("Lap 2: Drive slowly around right side of track")
 						fmt.Println("Next lap: Buffer lap / prepare to switch sides")
+						fmt.Println("")
+						fmt.Println("Right side driving")
+						fmt.Println("")
+						fmt.Println("0%  |                                                                                                      | 100%")
+						fmt.Printf("    ")
+						current_lap_number = 2
 
 					case 3:
 						fmt.Println("Lap 3: Buffer lap / prepare to switch sides")
 						fmt.Println("Next lap: You will be driving on the left side of the track at a slow speed")
+						current_lap_number = 3
 
 					case 4:
 						fmt.Println("Lap 4: Drive slowly around left side of track")
+						fmt.Println("")
+						fmt.Println("Left side driving")
+						fmt.Println("")
+						fmt.Println("0%  |                                                                                                      | 100%")
+						fmt.Printf("    ")
+						current_lap_number = 4
 
 					case 5:
 						fmt.Println("Fourth Lap finished. Exiting track_saver.....")
+						current_lap_number = 5
 						// Do some saving stuff here and things :)
 						redis_conn.Close()
 						os.Exit(1)
@@ -264,26 +320,22 @@ func main() {
 
 					case 2:
 						// right side driving
-						fmt.Println("")
-						fmt.Println("Lap 2:")
-						fmt.Println("Right side driving")
-						fmt.Println("")
-						fmt.Println("0%  |                                                                                                      | 100%")
-						fmt.Print("    ")
+						progress := 100 * users_data.M_lapDistance / track_length
 
-						fmt.Println(users_data.M_lapDistance)
+						if progress%2 == 0 {
+							color.Green("|")
+						}
 
 					case 3:
 						continue
 
 					case 4:
 						// left side driving
-						fmt.Println("")
-						fmt.Println("Lap 4:")
-						fmt.Println("Left side driving")
-						fmt.Println("")
-						fmt.Println("0%  |                                                                                                      | 100%")
-						fmt.Print("    ")
+						progress := 100 * users_data.M_lapDistance / track_length
+
+						if progress%2 == 0 {
+							color.Green("|")
+						}
 
 					default:
 						fmt.Println("")
