@@ -75,7 +75,7 @@ func ping(c redis.Conn) error {
 }
 
 // function that returns which side of the track the data is on
-func which_side(current_lap_number) string {
+func which_side(current_lap_number uint8) string {
 	switch current_lap_number {
 	case 2:
 		return "right"
@@ -88,7 +88,7 @@ func which_side(current_lap_number) string {
 }
 
 // Function that returns the incrementing number for its corresponding side
-func which_side_incrementing_number(current_lap_number) string {
+func which_side_incrementing_number(current_lap_number uint8) string {
 	switch current_lap_number {
 	case 2:
 		return strconv.Itoa(right_packet_number)
@@ -98,6 +98,15 @@ func which_side_incrementing_number(current_lap_number) string {
 		log.Println("Asked incrementing number for its corresponding side for a lap number that was not 2 (right) or 4 (left)")
 		return "error"
 	}
+}
+
+//
+func exit_track_saver(c redis.Conn) {
+  c.Do("FlushAll")
+  fmt.Println("\n")
+  log.Println("               redis flushed")
+  c.Close()
+  os.Exit(1)
 }
 
 func main() {
@@ -119,9 +128,6 @@ func main() {
 		os.Exit(1)
 	}()
 
-	defer func() {
-		redis_conn.Close()
-	}()
 
 	// call Redis PING command to test connectivity
 	err := ping(redis_conn)
@@ -291,9 +297,38 @@ func main() {
 					case 5:
 						fmt.Println("Fourth Lap finished. Exiting track_saver.....")
 						current_lap_number = 5
-						// Do some saving stuff here and things :)
-						redis_conn.Close()
-						os.Exit(1)
+
+
+            scanner := bufio.NewScanner(os.Stdin)
+          	fmt.Println("Would you like to save this track?")
+          	fmt.Println("Please input either a Y for yes or a N for no")
+          	fmt.Print("Answer: ")
+          	scanner.Scan()
+          	to_save_or_not_to_save := scanner.Text()
+            fmt.Print("\n")
+
+            correct_answer = false
+
+            while correct_answer == false {
+              switch ToLower(to_save_or_not_to_save) {
+              case "y":
+                fmt.Println("")
+                // Do some saving stuff here and things :)
+              case "n":
+                fmt.Println("")
+                fmt.Println("User has chosen NOT to save this track")
+                fmt.Println("Exiting track_saver.....")
+                exit_track_saver(redis_conn)
+              default:
+                fmt.Println("Please input a correct response")
+                fmt.Println("Please input either a Y for yes or a N for no")
+              	fmt.Print("Answer: ")
+              	scanner.Scan()
+              	to_save_or_not_to_save = scanner.Text()
+                fmt.Print("\n")
+              }
+            }
+
 
 					default:
 						fmt.Println("")
@@ -301,8 +336,7 @@ func main() {
 						color.Red("Error\n")
 						fmt.Println("Lap number not in range of 1-5 or some other error")
 						fmt.Println("Exiting track_saver.....")
-						redis_conn.Close()
-						os.Exit(1)
+						exit_track_saver(redis_conn)
 					}
 				} else {
 					// When we are in middle of a lap
@@ -338,8 +372,7 @@ func main() {
 						color.Red("Error\n")
 						fmt.Println("Lap number not in range of 1-4 or some other error")
 						fmt.Println("Exiting track_saver.....")
-						redis_conn.Close()
-						os.Exit(1)
+            exit_track_saver()
 					}
 				}
 
