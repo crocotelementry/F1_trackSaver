@@ -2,6 +2,12 @@ package main
 
 import (
   "bytes"
+  "log"
+  "fmt"
+  "os"
+	"os/signal"
+  "syscall"
+  "net"
   "encoding/binary"
 
   "github.com/crocotelementry/F1_GO/structs"
@@ -13,10 +19,17 @@ var (
 	header                                 structs.PacketHeader
 	Motion_packet                          structs.PacketMotionData
 	Session_packet                         structs.PacketSessionData
-  redis_ping_done                        = make(chan bool)
+  Lap_packet                             structs.PacketLapData
+  // redis_ping_done                        = make(chan bool)
 	redis_pool                             = newPool() // newPool returns a pointer to a redis.Pool
-  incrementing_motion_packet_number      = 0
-	incrementing_session_packet_number     = 0
+  // incrementing_motion_packet_number      = 0
+	// incrementing_session_packet_number     = 0
+  current_lap_number                     = uint8(0)
+  track_length                           = uint16(0)  // meters
+  track_id                               = int8(0)
+
+	addrs, _  = net.ResolveUDPAddr("udp", ":20777")
+	sock, err = net.ListenUDP("udp", addrs)
 )
 
 
@@ -59,11 +72,9 @@ func ping(c redis.Conn) error {
 	fmt.Print("Redis connection       ")
 
 	if s == "PONG" {
-		redis_ping_done <- true
-		color.Green("Success")
+		color.Green("Success\n")
 	} else {
-		redis_ping_done <- false
-		color.Red("Error")
+		color.Red("Error\n")
 	}
 
 	// Output: PONG
@@ -100,10 +111,27 @@ func main() {
 	}
 
 	// Set number of SETs to redis database to zero
-	incrementing_packet_number := 0
+	// incrementing_packet_number := 0
   // Create a reference point for our current lap. This is for adding things to catchup_packet number 2 stuff
-	current_lap_number := uint8(0)
+	// current_lap_number := uint8(0)
 
+
+
+  // fmt.Println("Track_saver started successfully")
+  fmt.Println("")
+  fmt.Println("")
+  fmt.Println("How to record track:")
+  fmt.Println("     Lap 1:    Get feel for track")
+  fmt.Println("     Lap 2:    Drive slowly around right side of track")
+  fmt.Println("     Lap 3:    Buffer lap / prepare to switch sides")
+  fmt.Println("     Lap 4:    Drive slowly around left side of track")
+  fmt.Println("")
+  fmt.Println("Once lap 4 is finished, track_saver will ask you if you are satisfied with your recording")
+  fmt.Println("If yes is selected, track_saver will save the track then exit")
+  fmt.Println("")
+  fmt.Println("")
+  fmt.Println("")
+  fmt.Println("")
 
 
 
@@ -135,19 +163,21 @@ func main() {
 				fmt.Println("binary.Read motion_packet failed:", err)
 			}
 
-      // Marshal the struct into json so we can save it in our redis database
-			json_motion_packet, err := json.Marshal(Motion_packet)
-			if err != nil {
-				fmt.Println(err)
-			}
 
-			if _, err := redis_conn.Do("SET", (strconv.FormatUint(Motion_packet.M_header.M_sessionUID, 10) + ":0:" + strconv.Itoa(incrementing_motion_packet_number)), json_motion_packet); err != nil {
-				fmt.Println("Adding json_motion_packet to Redis database failed:", err)
-				incrementing_packet_number -= 1
-				incrementing_motion_packet_number -= 1
-			}
-			incrementing_packet_number += 1
-			incrementing_motion_packet_number += 1
+
+      // // Marshal the struct into json so we can save it in our redis database
+			// json_motion_packet, err := json.Marshal(Motion_packet)
+			// if err != nil {
+			// 	fmt.Println(err)
+			// }
+      //
+			// if _, err := redis_conn.Do("SET", (strconv.FormatUint(Motion_packet.M_header.M_sessionUID, 10) + ":0:" + strconv.Itoa(incrementing_motion_packet_number)), json_motion_packet); err != nil {
+			// 	fmt.Println("Adding json_motion_packet to Redis database failed:", err)
+			// 	incrementing_packet_number -= 1
+			// 	incrementing_motion_packet_number -= 1
+			// }
+			// incrementing_packet_number += 1
+			// incrementing_motion_packet_number += 1
 
     case 1:
 			// If the packet we received is the session_packet, read its binary into our session_packet struct
@@ -155,19 +185,138 @@ func main() {
 				fmt.Println("binary.Read session_packet failed:", err)
 			}
 
-      // Marshal the struct into json so we can save it in our redis database
-			json_session_packet, err := json.Marshal(Session_packet)
-			if err != nil {
-				fmt.Println(err)
+      fmt.Println("Track length:", Session_packet.M_trackLength)
+
+      // If this is our first session_packet received, make sure to save the track length
+      if track_length == 0 {
+        track_length = Session_packet.M_trackLength
+      }
+
+      // If this is our first session_packet received, make sure to save the M_trackId
+      if track_id == 0 {
+        track_id = Session_packet.M_trackId
+      }
+
+
+
+      // // Marshal the struct into json so we can save it in our redis database
+			// json_session_packet, err := json.Marshal(Session_packet)
+			// if err != nil {
+			// 	fmt.Println(err)
+			// }
+      //
+			// if _, err := redis_conn.Do("SET", (strconv.FormatUint(Session_packet.M_header.M_sessionUID, 10) + ":1:" + strconv.Itoa(incrementing_session_packet_number)), json_session_packet); err != nil {
+			// 	fmt.Println("Adding json_motion_packet to Redis database failed:", err)
+			// 	incrementing_packet_number -= 1
+			// 	incrementing_session_packet_number -= 1
+			// }
+			// incrementing_packet_number += 1
+			// incrementing_session_packet_number += 1
+
+    case 2:
+      // If the packet we received is the lap_packed, read its binary into our lap_packet struct
+      if err := binary.Read(packet_bytes_reader, binary.LittleEndian, &Lap_packet); err != nil {
+				fmt.Println("binary.Read Lap_packet failed:", err)
 			}
 
-			if _, err := redis_conn.Do("SET", (strconv.FormatUint(Session_packet.M_header.M_sessionUID, 10) + ":1:" + strconv.Itoa(incrementing_session_packet_number)), json_session_packet); err != nil {
-				fmt.Println("Adding json_motion_packet to Redis database failed:", err)
-				incrementing_packet_number -= 1
-				incrementing_session_packet_number -= 1
-			}
-			incrementing_packet_number += 1
-			incrementing_session_packet_number += 1
+      users_data := Lap_packet.M_lapData[Lap_packet.M_header.M_playerCarIndex]
+
+      log.Println("Lap distance:", users_data.M_lapDistance)
+
+
+      if current_lap_number == 0 {
+        if users_data.M_currentLapNum != 1 {
+          fmt.Println("")
+          fmt.Println("Current Session alreday in progress!!!!")
+          fmt.Println("Exiting Track_saver.....")
+          fmt.Println("Please restart track_saver before starting a track session")
+        }
+      } else {
+
+        if users_data.M_currentLapNum != current_lap_number {
+          // When we get to a new lap
+          switch users_data.M_currentLapNum {
+          case 0:
+            fmt.Println("Not sure if lap 0 is a thing? this is here just in case lol")
+
+          case 1:
+            fmt.Println("Lap 1: Get the feel for the track")
+            fmt.Println("Next lap: You will be driving on the right side of the track at a slow speed")
+
+          case 2:
+            fmt.Println("Lap 2: Drive slowly around right side of track")
+            fmt.Println("Next lap: Buffer lap / prepare to switch sides")
+
+          case 3:
+            fmt.Println("Lap 3: Buffer lap / prepare to switch sides")
+            fmt.Println("Next lap: You will be driving on the left side of the track at a slow speed")
+
+          case 4:
+            fmt.Println("Lap 4: Drive slowly around left side of track")
+
+          case 5:
+            fmt.Println("Fourth Lap finished. Exiting track_saver.....")
+            // Do some saving stuff here and things :)
+            redis_conn.Close()
+            os.Exit(1)
+
+          default:
+            fmt.Println("")
+            fmt.Println("")
+            color.Red("Error\n")
+            fmt.Println("Lap number not in range of 1-5 or some other error")
+            fmt.Println("Exiting track_saver.....")
+            redis_conn.Close()
+            os.Exit(1)
+          }
+        } else {
+          // When we are in middle of a lap
+          switch users_data.M_currentLapNum {
+          case 0:
+            continue
+
+          case 1:
+            continue
+
+          case 2:
+            // right side driving
+            fmt.Println("")
+            fmt.Println("Lap 2:")
+            fmt.Println("Right side driving")
+            fmt.Println("")
+            fmt.Println("0%  |                                                                                                      | 100%")
+            fmt.Print("    ")
+
+            fmt.Println(users_data.M_lapDistance)
+
+
+          case 3:
+            continue
+
+          case 4:
+            // left side driving
+            fmt.Println("")
+            fmt.Println("Lap 4:")
+            fmt.Println("Left side driving")
+            fmt.Println("")
+            fmt.Println("0%  |                                                                                                      | 100%")
+            fmt.Print("    ")
+
+          default:
+            fmt.Println("")
+            fmt.Println("")
+            color.Red("Error\n")
+            fmt.Println("Lap number not in range of 1-4 or some other error")
+            fmt.Println("Exiting track_saver.....")
+            redis_conn.Close()
+            os.Exit(1)
+          }
+        }
+
+
+      }
+
+
 
 		default:
 			continue
