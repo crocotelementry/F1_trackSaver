@@ -129,11 +129,6 @@ func main() {
 		fmt.Println("Problem with connection to Redis database", err)
 	}
 
-	// Set number of SETs to redis database to zero
-	// incrementing_packet_number := 0
-	// Create a reference point for our current lap. This is for adding things to catchup_packet number 2 stuff
-	// current_lap_number := uint8(0)
-
 	// fmt.Println("Track_saver started successfully")
 	fmt.Println("")
 	fmt.Println("")
