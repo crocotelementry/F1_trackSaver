@@ -89,3 +89,32 @@ type PacketSessionData struct {
 	M_safetyCarStatus     uint8           // 0 = no safety car, 1 = full safety car, 2 = virtual safety car
 	M_networkGame         uint8           // 0 = offline, 1 = online
 }
+
+// LAP DATA PACKET:
+// The lap data packet gives details of all the cars in the session.
+// Frequency: Rate as specified in menus
+// Size: 841 bytes
+type LapData struct {
+	M_lastLapTime       float32 // Last lap time in seconds
+	M_currentLapTime    float32 // Current time around the lap in seconds
+	M_bestLapTime       float32 // Best lap time of the session in seconds
+	M_sector1Time       float32 // Sector 1 time in seconds
+	M_sector2Time       float32 // Sector 2 time in seconds
+	M_lapDistance       float32 // Distance vehicle is around current lap in metres – could be negative if line hasn’t been crossed yet
+	M_totalDistance     float32 // Total distance travelled in session in metres – could be negative if line hasn’t been crossed yet
+	M_safetyCarDelta    float32 // Delta in seconds for safety car
+	M_carPosition       uint8   // Car race position
+	M_currentLapNum     uint8   // Current lap number
+	M_pitStatus         uint8   // 0 = none, 1 = pitting, 2 = in pit area
+	M_sector            uint8   // 0 = sector1, 1 = sector2, 2 = sector3
+	M_currentLapInvalid uint8   // Current lap invalid - 0 = valid, 1 = invalid
+	M_penalties         uint8   // Accumulated time penalties in seconds to be added
+	M_gridPosition      uint8   // Grid position the vehicle started the race in
+	M_driverStatus      uint8   // Status of driver - 0 = in garage, 1 = flying lap, 2 = in lap, 3 = out lap, 4 = on track
+	M_resultStatus      uint8   // Result status - 0 = invalid, 1 = inactive, 2 = active, 3 = finished, 4 = disqualified, 5 = not classified, 6 = retired
+}
+type PacketLapData struct {
+	M_header PacketHeader // Header
+
+	M_lapData [20]LapData // Lap data for all cars on track
+}
