@@ -9,8 +9,13 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+  "strconv"
+  "encoding/json"
+  "bufio"
+  "strings"
+  "math"
 
-	"github.com/crocotelementry/F1_GO/structs"
+	"github.com/F1_trackSaver/structs"
 	"github.com/fatih/color"
 	"github.com/gomodule/redigo/redis"
 )
@@ -20,6 +25,7 @@ var (
 	Motion_packet       structs.PacketMotionData
 	Session_packet      structs.PacketSessionData
 	Lap_packet          structs.PacketLapData
+  position_struct     structs.Position_struct
 	redis_pool          = newPool() // newPool returns a pointer to a redis.Pool
 	current_lap_number  = uint8(0)
 	track_length        = uint16(0) // meters
@@ -27,6 +33,12 @@ var (
 	total_packet_number = 0
 	right_packet_number = 0
 	left_packet_number  = 0
+  lap1_progress       = 0
+  lap2_progress       = 0
+  lap3_progress       = 0
+  lap4_progress       = 0
+  // green = color.Green.SprintFunc()
+  // green_progress_line = color.Green
 
 	addrs, _  = net.ResolveUDPAddr("udp", ":20777")
 	sock, err = net.ListenUDP("udp", addrs)
@@ -182,7 +194,7 @@ func main() {
 					fmt.Println("binary.Read motion_packet failed:", err)
 				}
 
-				position_struct := structs.Position_struct{
+				position_struct := structs.Position_struct {
 					Frame_identifier: Motion_packet.M_header.M_frameIdentifier,
 					Track_id:         track_id,
 					Lap_number:       current_lap_number,
@@ -199,7 +211,7 @@ func main() {
 					fmt.Println(err)
 				}
 
-				if _, err := redis_conn.Do("SET", ("track_saver:" + which_side(current_lap_number) + ":" + which_side_incrementing_number(current_lap_number)), json_motion_packet); err != nil {
+				if _, err := redis_conn.Do("SET", ("track_saver:" + which_side(current_lap_number) + ":" + which_side_incrementing_number(current_lap_number)), json_position_struct); err != nil {
 
 					fmt.Println("Adding track_saver data "+which_side(current_lap_number)+" to Redis database failed:", err)
 					total_packet_number -= 1
@@ -228,7 +240,7 @@ func main() {
 				fmt.Println("binary.Read session_packet failed:", err)
 			}
 
-			fmt.Println("Track length:", Session_packet.M_trackLength)
+			// fmt.Println("Track length:", Session_packet.M_trackLength)
 
 			// If this is our first session_packet received, make sure to save the track length
 			if track_length == 0 {
@@ -248,7 +260,8 @@ func main() {
 
 			users_data := Lap_packet.M_lapData[Lap_packet.M_header.M_playerCarIndex]
 
-			log.Println("Lap distance:", users_data.M_lapDistance)
+			// log.Println("Lap distance:", users_data.M_lapDistance)
+      // log.Println("Current lap number", users_data.M_currentLapNum)
 
 			if current_lap_number == 0 {
 				if users_data.M_currentLapNum != 1 {
@@ -256,7 +269,16 @@ func main() {
 					fmt.Println("Current Session alreday in progress!!!!")
 					fmt.Println("Exiting Track_saver.....")
 					fmt.Println("Please restart track_saver before starting a track session")
-				}
+				} else {
+          fmt.Println("Lap 1: Get the feel for the track")
+          fmt.Println("Next lap: You will be driving on the right side of the track at a slow speed")
+          fmt.Println("")
+          fmt.Println("Easy driving")
+          fmt.Println("")
+          fmt.Println("0%  |                                                                                                      | 100%")
+          fmt.Printf("    ")
+          current_lap_number = 1
+        }
 			} else {
 
 				if users_data.M_currentLapNum != current_lap_number {
@@ -266,12 +288,17 @@ func main() {
 						fmt.Println("Not sure if lap 0 is a thing? this is here just in case lol")
 
 					case 1:
-						fmt.Println("Lap 1: Get the feel for the track")
+						fmt.Println("\nLap 1: Get the feel for the track")
 						fmt.Println("Next lap: You will be driving on the right side of the track at a slow speed")
+            fmt.Println("")
+						fmt.Println("Easy driving")
+						fmt.Println("")
+						fmt.Println("0%  |                                                                                                      | 100%")
+						fmt.Printf("    ")
 						current_lap_number = 1
 
 					case 2:
-						fmt.Println("Lap 2: Drive slowly around right side of track")
+						fmt.Println("\nLap 2: Drive slowly around right side of track")
 						fmt.Println("Next lap: Buffer lap / prepare to switch sides")
 						fmt.Println("")
 						fmt.Println("Right side driving")
@@ -281,12 +308,17 @@ func main() {
 						current_lap_number = 2
 
 					case 3:
-						fmt.Println("Lap 3: Buffer lap / prepare to switch sides")
+						fmt.Println("\nLap 3: Buffer lap / prepare to switch sides")
 						fmt.Println("Next lap: You will be driving on the left side of the track at a slow speed")
+            fmt.Println("")
+						fmt.Println("Easy driving / buffer lap")
+						fmt.Println("")
+						fmt.Println("0%  |                                                                                                      | 100%")
+						fmt.Printf("    ")
 						current_lap_number = 3
 
 					case 4:
-						fmt.Println("Lap 4: Drive slowly around left side of track")
+						fmt.Println("\nLap 4: Drive slowly around left side of track")
 						fmt.Println("")
 						fmt.Println("Left side driving")
 						fmt.Println("")
@@ -307,10 +339,10 @@ func main() {
           	to_save_or_not_to_save := scanner.Text()
             fmt.Print("\n")
 
-            correct_answer = false
+            // correct_answer := false
 
-            while correct_answer == false {
-              switch ToLower(to_save_or_not_to_save) {
+            for {
+              switch strings.ToLower(to_save_or_not_to_save) {
               case "y":
                 fmt.Println("")
                 // Do some saving stuff here and things :)
@@ -340,40 +372,58 @@ func main() {
 					}
 				} else {
 					// When we are in middle of a lap
-					switch users_data.M_currentLapNum {
-					case 0:
-						continue
+          if users_data.M_lapDistance > 0 {
+            switch users_data.M_currentLapNum {
+  					case 0:
+  						continue
 
-					case 1:
-						continue
+  					case 1:
+              progress := 100 * int(math.Trunc(float64(users_data.M_lapDistance))) / int(track_length)
 
-					case 2:
-						// right side driving
-						progress := 100 * users_data.M_lapDistance / track_length
+              // fmt.Println("progress", progress)
+              // fmt.Println(int(math.Trunc(float64(users_data.M_lapDistance))), int(track_length))
 
-						if progress%2 == 0 {
-							color.Green("|")
-						}
+              if progress > 0 && progress > lap1_progress {
+                fmt.Printf("%s", color.GreenString("|"))
+                lap1_progress = progress
+  						}
 
-					case 3:
-						continue
+  					case 2:
+  						// right side driving
+  						progress := 100 * int(math.Trunc(float64(users_data.M_lapDistance))) / int(track_length)
 
-					case 4:
-						// left side driving
-						progress := 100 * users_data.M_lapDistance / track_length
+  						if progress > 0 && progress > lap2_progress {
+                fmt.Printf("%s", color.GreenString("|"))
+                lap2_progress = progress
+  						}
 
-						if progress%2 == 0 {
-							color.Green("|")
-						}
+  					case 3:
+              progress := 100 * int(math.Trunc(float64(users_data.M_lapDistance))) / int(track_length)
 
-					default:
-						fmt.Println("")
-						fmt.Println("")
-						color.Red("Error\n")
-						fmt.Println("Lap number not in range of 1-4 or some other error")
-						fmt.Println("Exiting track_saver.....")
-            exit_track_saver()
-					}
+              if progress > 0 && progress > lap3_progress {
+                fmt.Printf("%s", color.GreenString("|"))
+                lap3_progress = progress
+  						}
+
+  					case 4:
+  						// left side driving
+  						progress := 100 * int(math.Trunc(float64(users_data.M_lapDistance))) / int(track_length)
+
+              if progress > 0 && progress > lap4_progress {
+                fmt.Printf("%s", color.GreenString("|"))
+                lap4_progress = progress
+  						}
+
+  					default:
+  						fmt.Println("")
+  						fmt.Println("")
+  						color.Red("Error\n")
+  						fmt.Println("Lap number not in range of 1-4 or some other error")
+  						fmt.Println("Exiting track_saver.....")
+              exit_track_saver(redis_conn)
+  					}
+          }
+
 				}
 
 			}
