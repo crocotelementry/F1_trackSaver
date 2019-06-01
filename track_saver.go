@@ -37,8 +37,6 @@ var (
 	lap2_progress       = 0
 	lap3_progress       = 0
 	lap4_progress       = 0
-	// green = color.Green.SprintFunc()
-	// green_progress_line = color.Green
 
 	addrs, _  = net.ResolveUDPAddr("udp", ":20777")
 	sock, err = net.ListenUDP("udp", addrs)
@@ -146,7 +144,6 @@ func main() {
 		fmt.Println("Problem with connection to Redis database", err)
 	}
 
-	// fmt.Println("Track_saver started successfully")
 	fmt.Println("")
 	fmt.Println("")
 	fmt.Println("How to record track:")
@@ -182,7 +179,6 @@ func main() {
 
 		// Depending on which packet we have, which we find by looking at header.M_packetId
 		// We use a switch statement to then read the whole binary udp packet into its associated struct
-
 		switch header.M_packetId {
 		case 0:
 
@@ -239,8 +235,6 @@ func main() {
 				fmt.Println("binary.Read session_packet failed:", err)
 			}
 
-			// fmt.Println("Track length:", Session_packet.M_trackLength)
-
 			// If this is our first session_packet received, make sure to save the track length
 			if track_length == 0 {
 				track_length = Session_packet.M_trackLength
@@ -258,9 +252,6 @@ func main() {
 			}
 
 			users_data := Lap_packet.M_lapData[Lap_packet.M_header.M_playerCarIndex]
-
-			// log.Println("Lap distance:", users_data.M_lapDistance)
-			// log.Println("Current lap number", users_data.M_currentLapNum)
 
 			if current_lap_number == 0 {
 				if users_data.M_currentLapNum != 1 {
@@ -287,41 +278,41 @@ func main() {
 						fmt.Println("Not sure if lap 0 is a thing? this is here just in case lol")
 
 					case 1:
-						fmt.Println("\nLap 1: Get the feel for the track")
+						fmt.Println("\n\nLap 1: Get the feel for the track")
 						fmt.Println("Next lap: You will be driving on the right side of the track at a slow speed")
 						fmt.Println("")
 						fmt.Println("Easy driving")
-						fmt.Println("")
-						fmt.Println("0%  |                                                                                                      | 100%")
-						fmt.Printf("    ")
+						// fmt.Println("")
+						// fmt.Println("0%  |                                                                                                 | 100%")
+						// fmt.Printf("    ")
 						current_lap_number = 1
 
 					case 2:
-						fmt.Println("\nLap 2: Drive slowly around right side of track")
+						fmt.Println("\n\nLap 2: Drive slowly around right side of track")
 						fmt.Println("Next lap: Buffer lap / prepare to switch sides")
 						fmt.Println("")
 						fmt.Println("Right side driving")
 						fmt.Println("")
-						fmt.Println("0%  |                                                                                                      | 100%")
+						fmt.Println("0%  |                                                                                                 | 100%")
 						fmt.Printf("    ")
 						current_lap_number = 2
 
 					case 3:
-						fmt.Println("\nLap 3: Buffer lap / prepare to switch sides")
+						fmt.Println("\n\nLap 3: Buffer lap / prepare to switch sides")
 						fmt.Println("Next lap: You will be driving on the left side of the track at a slow speed")
 						fmt.Println("")
 						fmt.Println("Easy driving / buffer lap")
-						fmt.Println("")
-						fmt.Println("0%  |                                                                                                      | 100%")
-						fmt.Printf("    ")
+						// fmt.Println("")
+						// fmt.Println("0%  |                                                                                                 | 100%")
+						// fmt.Printf("    ")
 						current_lap_number = 3
 
 					case 4:
-						fmt.Println("\nLap 4: Drive slowly around left side of track")
-						fmt.Println("")
+						fmt.Println("\n\nLap 4: Drive slowly around left side of track")
+						// fmt.Println("")
 						fmt.Println("Left side driving")
 						fmt.Println("")
-						fmt.Println("0%  |                                                                                                      | 100%")
+						fmt.Println("0%  |                                                                                                 | 100%")
 						fmt.Printf("    ")
 						current_lap_number = 4
 
@@ -330,6 +321,8 @@ func main() {
 						current_lap_number = 5
 
 						scanner := bufio.NewScanner(os.Stdin)
+            fmt.Println("")
+            fmt.Println("")
 						fmt.Println("Would you like to save this track?")
 						fmt.Println("Please input either a Y for yes or a N for no")
 						fmt.Print("Answer: ")
@@ -344,6 +337,9 @@ func main() {
 							case "y":
 								fmt.Println("")
 								// Do some saving stuff here and things :)
+                fmt.Println("User has saved the track")
+								fmt.Println("Exiting track_saver.....")
+								exit_track_saver(redis_conn)
 							case "n":
 								fmt.Println("")
 								fmt.Println("User has chosen NOT to save this track")
@@ -375,15 +371,13 @@ func main() {
 							continue
 
 						case 1:
-							progress := 100 * int(math.Trunc(float64(users_data.M_lapDistance))) / int(track_length)
-
-							// fmt.Println("progress", progress)
-							// fmt.Println(int(math.Trunc(float64(users_data.M_lapDistance))), int(track_length))
-
-							if progress > 0 && progress > lap1_progress {
-								fmt.Printf("%s", color.GreenString("|"))
-								lap1_progress = progress
-							}
+							// progress := 100 * int(math.Trunc(float64(users_data.M_lapDistance))) / int(track_length)
+              //
+							// if progress > 0 && progress > lap1_progress {
+							// 	fmt.Printf("%s", color.GreenString("|"))
+							// 	lap1_progress = progress
+							// }
+              continue
 
 						case 2:
 							// right side driving
@@ -395,12 +389,13 @@ func main() {
 							}
 
 						case 3:
-							progress := 100 * int(math.Trunc(float64(users_data.M_lapDistance))) / int(track_length)
-
-							if progress > 0 && progress > lap3_progress {
-								fmt.Printf("%s", color.GreenString("|"))
-								lap3_progress = progress
-							}
+							// progress := 100 * int(math.Trunc(float64(users_data.M_lapDistance))) / int(track_length)
+              //
+							// if progress > 0 && progress > lap3_progress {
+							// 	fmt.Printf("%s", color.GreenString("|"))
+							// 	lap3_progress = progress
+							// }
+              continue
 
 						case 4:
 							// left side driving
