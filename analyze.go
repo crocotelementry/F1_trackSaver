@@ -4,28 +4,27 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+  "strconv"
 
 	"github.com/F1_trackSaver/structs"
-	"github.com/fatih/color"
+	// "github.com/fatih/color"
 	"github.com/gomodule/redigo/redis"
 )
 
 var (
-	position_struct structs.Position_struct
+	right_max_x = float32(0)
+	right_max_y = float32(0)
+	right_max_z = float32(0)
+	left_max_x  = float32(0)
+	left_max_y  = float32(0)
+	left_max_z  = float32(0)
 
-	right_max_x = 0
-	right_max_y = 0
-	right_max_z = 0
-	left_max_x  = 0
-	left_max_y  = 0
-	left_max_z  = 0
-
-	right_min_x = 0
-	right_min_y = 0
-	right_min_z = 0
-	left_min_x  = 0
-	left_min_y  = 0
-	left_min_z  = 0
+	right_min_x = float32(0)
+	right_min_y = float32(0)
+	right_min_z = float32(0)
+	left_min_x  = float32(0)
+	left_min_y  = float32(0)
+	left_min_z  = float32(0)
 )
 
 func set_min_and_max(redis_conn redis.Conn) error {
@@ -74,9 +73,9 @@ func set_min_and_max(redis_conn redis.Conn) error {
 	return nil
 }
 
-func find_min_and_max(redis_conn redis.Conn, string side, int incrementing_number) error {
+func find_min_and_max(redis_conn redis.Conn, side string, incrementing_number int) error {
 
-	position_struct := new(structs.Position_struct)
+	position_structs := new(structs.Position_struct)
 
 	// We start at 1 since we already got the data from 0 for our initial setting for min and max
 	for struct_number := 1; struct_number < incrementing_number; struct_number += 1 {
@@ -164,7 +163,7 @@ func find_min_and_max(redis_conn redis.Conn, string side, int incrementing_numbe
 	return nil
 }
 
-func track_analyzer(redis_conn redis.Conn, int left_side_incrementing_number, int right_side_incrementing_number) {
+func analyse_track(redis_conn redis.Conn, left_side_incrementing_number int, right_side_incrementing_number int) {
 
 	// set the min and max to the first position data
 	err = set_min_and_max(redis_conn)
