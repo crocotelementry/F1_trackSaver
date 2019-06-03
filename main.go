@@ -321,8 +321,8 @@ func main() {
 						current_lap_number = 5
 
 						scanner := bufio.NewScanner(os.Stdin)
-            fmt.Println("")
-            fmt.Println("")
+						fmt.Println("")
+						fmt.Println("")
 						fmt.Println("Would you like to save this track?")
 						fmt.Println("Please input either a Y for yes or a N for no")
 						fmt.Print("Answer: ")
@@ -336,13 +336,13 @@ func main() {
 							switch strings.ToLower(to_save_or_not_to_save) {
 							case "y":
 								fmt.Println("")
-                fmt.Println("This is acting as the analizer")
-                fmt.Println("Starting analyzer:")
-                analyse_track(redis_conn)
+								fmt.Println("This is acting as the analizer")
+								fmt.Println("Starting analyzer:")
+								analyse_track(redis_conn)
 								// Do some saving stuff here and things :)
-                fmt.Println("")
-                fmt.Println("")
-                fmt.Println("User has saved the track")
+								fmt.Println("")
+								fmt.Println("")
+								fmt.Println("User has saved the track")
 								fmt.Println("Exiting track_saver.....")
 								exit_track_saver(redis_conn)
 							case "n":
@@ -377,12 +377,12 @@ func main() {
 
 						case 1:
 							// progress := 100 * int(math.Trunc(float64(users_data.M_lapDistance))) / int(track_length)
-              //
+							//
 							// if progress > 0 && progress > lap1_progress {
 							// 	fmt.Printf("%s", color.GreenString("|"))
 							// 	lap1_progress = progress
 							// }
-              continue
+							continue
 
 						case 2:
 							// right side driving
@@ -395,12 +395,12 @@ func main() {
 
 						case 3:
 							// progress := 100 * int(math.Trunc(float64(users_data.M_lapDistance))) / int(track_length)
-              //
+							//
 							// if progress > 0 && progress > lap3_progress {
 							// 	fmt.Printf("%s", color.GreenString("|"))
 							// 	lap3_progress = progress
 							// }
-              continue
+							continue
 
 						case 4:
 							// left side driving
