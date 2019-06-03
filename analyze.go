@@ -163,7 +163,7 @@ func find_min_and_max(redis_conn redis.Conn, side string, incrementing_number in
 	return nil
 }
 
-func analyse_track(redis_conn redis.Conn, left_side_incrementing_number int, right_side_incrementing_number int) {
+func analyse_track(redis_conn redis.Conn, right_side_incrementing_number int, left_side_incrementing_number int) {
 
 	// set the min and max to the first position data
 	err = set_min_and_max(redis_conn)
@@ -178,12 +178,12 @@ func analyse_track(redis_conn redis.Conn, left_side_incrementing_number int, rig
 	// that information!
 	fmt.Println("Track general information:")
 	fmt.Println("")
-	fmt.Println("Minimum values:")
+	fmt.Println("Maximum values:")
 	fmt.Println("    X:       right:", right_max_x, "   left:", left_max_x)
 	fmt.Println("    Y:       right:", right_max_y, "   left:", left_max_y)
 	fmt.Println("    Z:       right:", right_max_z, "   left:", left_max_z)
 	fmt.Println("")
-	fmt.Println("Maximum values:")
+	fmt.Println("Minimum values:")
 	fmt.Println("    X:       right:", right_min_x, "   left:", left_min_x)
 	fmt.Println("    Y:       right:", right_min_y, "   left:", left_min_y)
 	fmt.Println("    Z:       right:", right_min_z, "   left:", left_min_z)
