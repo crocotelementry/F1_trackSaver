@@ -338,7 +338,7 @@ func main() {
 								fmt.Println("")
 								fmt.Println("This is acting as the analizer")
 								fmt.Println("Starting analyzer:")
-								analyse_track(redis_conn)
+								analyse_track(redis_conn, right_packet_number, left_packet_number)
 								// Do some saving stuff here and things :)
 								fmt.Println("")
 								fmt.Println("")
