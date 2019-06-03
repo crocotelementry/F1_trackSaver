@@ -110,7 +110,7 @@ func which_side_incrementing_number(current_lap_number uint8) string {
 	}
 }
 
-//
+// Function that flushes our temp redis database, closes the redis connection and exits the program
 func exit_track_saver(c redis.Conn) {
 	c.Do("FlushAll")
 	fmt.Println("\n")
@@ -336,7 +336,12 @@ func main() {
 							switch strings.ToLower(to_save_or_not_to_save) {
 							case "y":
 								fmt.Println("")
+                fmt.Println("This is acting as the analizer")
+                fmt.Println("Starting analyzer:")
+                analyse_track(redis_conn)
 								// Do some saving stuff here and things :)
+                fmt.Println("")
+                fmt.Println("")
                 fmt.Println("User has saved the track")
 								fmt.Println("Exiting track_saver.....")
 								exit_track_saver(redis_conn)
