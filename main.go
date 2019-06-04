@@ -26,7 +26,7 @@ var (
 	Session_packet      structs.PacketSessionData
 	Lap_packet          structs.PacketLapData
 	position_struct     structs.Position_struct
-  distance_struct     structs.Distance_struct
+	distance_struct     structs.Distance_struct
 	redis_pool          = newPool() // newPool returns a pointer to a redis.Pool
 	current_lap_number  = uint8(0)
 	track_length        = uint16(0) // meters
@@ -298,21 +298,21 @@ func main() {
 						fmt.Printf("    ")
 						current_lap_number = 2
 
-            // add distance to redis
-            distance_struct := structs.Distance_struct{
-              Frame_identifier: Lap_packet.M_header.M_frameIdentifier,
-              Distance: users_data.M_lapDistance,
-    				}
+						// add distance to redis
+						distance_struct := structs.Distance_struct{
+							Frame_identifier: Lap_packet.M_header.M_frameIdentifier,
+							Distance:         users_data.M_lapDistance,
+						}
 
-    				// Marshal the struct into json so we can save it in our redis database
-    				json_distance_struct, err := json.Marshal(distance_struct)
-    				if err != nil {
-    					fmt.Println(err)
-    				}
+						// Marshal the struct into json so we can save it in our redis database
+						json_distance_struct, err := json.Marshal(distance_struct)
+						if err != nil {
+							fmt.Println(err)
+						}
 
-            if _, err := redis_conn.Do("SET", ("distance:" + (strconv.FormatUint(uint64(Lap_packet.M_header.M_frameIdentifier), 10))), json_distance_struct); err != nil {
-    					fmt.Println("Adding distance data ", which_side(current_lap_number), "on lap number", current_lap_number," to Redis database failed:", err)
-    				}
+						if _, err := redis_conn.Do("SET", ("distance:" + (strconv.FormatUint(uint64(Lap_packet.M_header.M_frameIdentifier), 10))), json_distance_struct); err != nil {
+							fmt.Println("Adding distance data ", which_side(current_lap_number), "on lap number", current_lap_number, " to Redis database failed:", err)
+						}
 
 					case 3:
 						fmt.Println("\n\nLap 3: Buffer lap / prepare to switch sides")
@@ -333,21 +333,21 @@ func main() {
 						fmt.Printf("    ")
 						current_lap_number = 4
 
-            // add distance to redis
-            distance_struct := structs.Distance_struct{
-              Frame_identifier: Lap_packet.M_header.M_frameIdentifier,
-              Distance: users_data.M_lapDistance,
-    				}
+						// add distance to redis
+						distance_struct := structs.Distance_struct{
+							Frame_identifier: Lap_packet.M_header.M_frameIdentifier,
+							Distance:         users_data.M_lapDistance,
+						}
 
-    				// Marshal the struct into json so we can save it in our redis database
-    				json_distance_struct, err := json.Marshal(distance_struct)
-    				if err != nil {
-    					fmt.Println(err)
-    				}
+						// Marshal the struct into json so we can save it in our redis database
+						json_distance_struct, err := json.Marshal(distance_struct)
+						if err != nil {
+							fmt.Println(err)
+						}
 
-            if _, err := redis_conn.Do("SET", ("distance:" + (strconv.FormatUint(uint64(Lap_packet.M_header.M_frameIdentifier), 10))), json_distance_struct); err != nil {
-    					fmt.Println("Adding distance data ", which_side(current_lap_number), "on lap number", current_lap_number," to Redis database failed:", err)
-    				}
+						if _, err := redis_conn.Do("SET", ("distance:" + (strconv.FormatUint(uint64(Lap_packet.M_header.M_frameIdentifier), 10))), json_distance_struct); err != nil {
+							fmt.Println("Adding distance data ", which_side(current_lap_number), "on lap number", current_lap_number, " to Redis database failed:", err)
+						}
 
 					case 5:
 						fmt.Println("Fourth Lap finished. Exiting track_saver.....")
@@ -426,21 +426,21 @@ func main() {
 								lap2_progress = progress
 							}
 
-              // add distance to redis
-              distance_struct := structs.Distance_struct{
-                Frame_identifier: Lap_packet.M_header.M_frameIdentifier,
-                Distance: users_data.M_lapDistance,
-      				}
+							// add distance to redis
+							distance_struct := structs.Distance_struct{
+								Frame_identifier: Lap_packet.M_header.M_frameIdentifier,
+								Distance:         users_data.M_lapDistance,
+							}
 
-      				// Marshal the struct into json so we can save it in our redis database
-      				json_distance_struct, err := json.Marshal(distance_struct)
-      				if err != nil {
-      					fmt.Println(err)
-      				}
+							// Marshal the struct into json so we can save it in our redis database
+							json_distance_struct, err := json.Marshal(distance_struct)
+							if err != nil {
+								fmt.Println(err)
+							}
 
-              if _, err := redis_conn.Do("SET", ("distance:" + (strconv.FormatUint(uint64(Lap_packet.M_header.M_frameIdentifier), 10))), json_distance_struct); err != nil {
-      					fmt.Println("Adding distance data ", which_side(current_lap_number), "on lap number", current_lap_number," to Redis database failed:", err)
-      				}
+							if _, err := redis_conn.Do("SET", ("distance:" + (strconv.FormatUint(uint64(Lap_packet.M_header.M_frameIdentifier), 10))), json_distance_struct); err != nil {
+								fmt.Println("Adding distance data ", which_side(current_lap_number), "on lap number", current_lap_number, " to Redis database failed:", err)
+							}
 
 						case 3:
 							// progress := 100 * int(math.Trunc(float64(users_data.M_lapDistance))) / int(track_length)
@@ -460,21 +460,21 @@ func main() {
 								lap4_progress = progress
 							}
 
-              // add distance to redis
-              distance_struct := structs.Distance_struct{
-                Frame_identifier: Lap_packet.M_header.M_frameIdentifier,
-                Distance: users_data.M_lapDistance,
-      				}
+							// add distance to redis
+							distance_struct := structs.Distance_struct{
+								Frame_identifier: Lap_packet.M_header.M_frameIdentifier,
+								Distance:         users_data.M_lapDistance,
+							}
 
-      				// Marshal the struct into json so we can save it in our redis database
-      				json_distance_struct, err := json.Marshal(distance_struct)
-      				if err != nil {
-      					fmt.Println(err)
-      				}
+							// Marshal the struct into json so we can save it in our redis database
+							json_distance_struct, err := json.Marshal(distance_struct)
+							if err != nil {
+								fmt.Println(err)
+							}
 
-              if _, err := redis_conn.Do("SET", ("distance:" + (strconv.FormatUint(uint64(Lap_packet.M_header.M_frameIdentifier), 10))), json_distance_struct); err != nil {
-      					fmt.Println("Adding distance data ", which_side(current_lap_number), "on lap number", current_lap_number," to Redis database failed:", err)
-      				}
+							if _, err := redis_conn.Do("SET", ("distance:" + (strconv.FormatUint(uint64(Lap_packet.M_header.M_frameIdentifier), 10))), json_distance_struct); err != nil {
+								fmt.Println("Adding distance data ", which_side(current_lap_number), "on lap number", current_lap_number, " to Redis database failed:", err)
+							}
 
 						default:
 							fmt.Println("")
