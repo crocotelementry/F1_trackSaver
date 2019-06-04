@@ -15,3 +15,14 @@ type Distance_struct struct {
 
 	Distance float32 // Distance vehicle is around current lap in metres – could be negative if line hasn’t been crossed yet
 }
+
+
+type Compress_track_struct struct {
+  Frame_identifier uint32 // Identifier for the frame the data was retrieved on
+  Side string
+
+  Distance int // Distance vehicle is around current lap in metres – could be negative if line hasn’t been crossed yet
+  WorldPositionX   float32 // World space X position
+	WorldPositionY   float32 // World space Y position
+	WorldPositionZ   float32 // World space Z position
+}
