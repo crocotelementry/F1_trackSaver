@@ -88,8 +88,14 @@ func ping(c redis.Conn) error {
 // function that returns which side of the track the data is on
 func which_side(current_lap_number uint8) string {
 	switch current_lap_number {
+  case 1:
+    fmt.Println("Lap 1, should only be lap 2 or 4")
+    return "error"
 	case 2:
 		return "right"
+  case 3:
+    fmt.Println("Lap 3, should only be lap 2 or 4")
+    return "error"
 	case 4:
 		return "left"
 	default:
@@ -183,6 +189,13 @@ func main() {
 		switch header.M_packetId {
 		case 0:
 
+      // if err := binary.Read(packet_bytes_reader, binary.LittleEndian, &Motion_packet); err != nil {
+      //   fmt.Println("binary.Read motion_packet failed:", err)
+      // }
+      //
+      // fmt.Println("position struct:   Frame_identifier:",  Motion_packet.M_header.M_frameIdentifier, "   Lap_number:", current_lap_number)
+      // fmt.Println("")
+
 			// We only want to record data when we are driving on the right during lap 2 or the left during lap 4
 			if current_lap_number == 2 || current_lap_number == 4 {
 				// If the packet we received is a motion_packet, read its binary into our motion_packet struct
@@ -231,20 +244,24 @@ func main() {
 			}
 
 		case 1:
-			// If the packet we received is the session_packet, read its binary into our session_packet struct
-			if err := binary.Read(packet_bytes_reader, binary.LittleEndian, &Session_packet); err != nil {
-				fmt.Println("binary.Read session_packet failed:", err)
-			}
 
-			// If this is our first session_packet received, make sure to save the track length
-			if track_length == 0 {
-				track_length = Session_packet.M_trackLength
-			}
+      if track_length == 0 || track_id == -2 {
+        // If the packet we received is the session_packet, read its binary into our session_packet struct
+  			if err := binary.Read(packet_bytes_reader, binary.LittleEndian, &Session_packet); err != nil {
+  				fmt.Println("binary.Read session_packet failed:", err)
+  			}
 
-			// If this is our first session_packet received, make sure to save the M_trackId
-			if track_id == -2 {
-				track_id = Session_packet.M_trackId
-			}
+        // If this is our first session_packet received, make sure to save the track length
+  			if track_length == 0 {
+  				track_length = Session_packet.M_trackLength
+  			}
+
+  			// If this is our first session_packet received, make sure to save the M_trackId
+  			if track_id == -2 {
+  				track_id = Session_packet.M_trackId
+  			}
+
+      }
 
 		case 2:
 			// If the packet we received is the lap_packed, read its binary into our lap_packet struct
@@ -253,6 +270,10 @@ func main() {
 			}
 
 			users_data := Lap_packet.M_lapData[Lap_packet.M_header.M_playerCarIndex]
+
+      // fmt.Println("distance struct:   Frame_identifier:", Lap_packet.M_header.M_frameIdentifier, "   Distance:", users_data.M_lapDistance)
+      // fmt.Println("")
+
 
 			if current_lap_number == 0 {
 				if users_data.M_currentLapNum != 1 {
@@ -471,6 +492,11 @@ func main() {
 							if err != nil {
 								fmt.Println(err)
 							}
+
+              // fmt.Println("distance struct:")
+              // fmt.Println("   Frame_identifier:", Lap_packet.M_header.M_frameIdentifier)
+              // fmt.Println("   Distance:", users_data.M_lapDistance)
+              // fmt.Println("")
 
 							if _, err := redis_conn.Do("SET", ("distance:" + (strconv.FormatUint(uint64(Lap_packet.M_header.M_frameIdentifier), 10))), json_distance_struct); err != nil {
 								fmt.Println("Adding distance data ", which_side(current_lap_number), "on lap number", current_lap_number, " to Redis database failed:", err)
